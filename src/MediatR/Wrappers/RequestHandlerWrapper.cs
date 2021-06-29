@@ -51,8 +51,10 @@ namespace MediatR.Wrappers
         {
             Task<TResponse> Handler() => GetHandler<IRequestHandler<TRequest, TResponse>>(serviceFactory).Handle((TRequest) request, cancellationToken);
 
-            return serviceFactory
-                .GetInstances<IPipelineBehavior<TRequest, TResponse>>()
+            var pipelineOrder = (IBehaviorOrder) serviceFactory(typeof(IBehaviorOrder));
+            
+            return pipelineOrder
+                .GetPipelineBehaviors<TRequest, TResponse>(serviceFactory)
                 .Reverse()
                 .OrderBy(i => i.GetType()
                                   .GetCustomAttributes(typeof(PipelinePriorityAttribute), true)
