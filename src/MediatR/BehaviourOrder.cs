@@ -42,6 +42,7 @@ namespace MediatR
             var constructedTypes = _registeredTypes
                 .Select(t =>
                 {
+                    // Try catch is the most reliable approach https://stackoverflow.com/a/4864565/422427
                     try
                     {
                         return t.MakeGenericType(typeof(TRequest), typeof(TResponse));

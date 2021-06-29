@@ -57,9 +57,10 @@ namespace MediatR.Wrappers
 
             try
             {
-                pipelineBehaviors = ((IBehaviorOrder) serviceFactory(typeof(IBehaviorOrder))).GetPipelineBehaviors<TRequest, TResponse>(serviceFactory);
+                var instance = (IBehaviorOrder) serviceFactory(typeof(IBehaviorOrder));
+                pipelineBehaviors = instance.GetPipelineBehaviors<TRequest, TResponse>(serviceFactory);
             }
-            catch (Exception)
+            catch (Exception) // when an IBehaviour instance can't be found in container
             {
                 pipelineBehaviors = (IEnumerable<IPipelineBehavior<TRequest, TResponse>>) serviceFactory(typeof(IEnumerable<IPipelineBehavior<TRequest, TResponse>>));
             }
