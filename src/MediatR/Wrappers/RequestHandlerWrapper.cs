@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace MediatR.Wrappers
 {
     using System;
@@ -44,20 +46,27 @@ namespace MediatR.Wrappers
     {
         public override async Task<object?> Handle(object request, CancellationToken cancellationToken,
             ServiceFactory serviceFactory) =>
-            await Handle((IRequest<TResponse>)request, cancellationToken, serviceFactory);
+            await Handle((IRequest<TResponse>) request, cancellationToken, serviceFactory);
 
         public override Task<TResponse> Handle(IRequest<TResponse> request, CancellationToken cancellationToken,
             ServiceFactory serviceFactory)
         {
             Task<TResponse> Handler() => GetHandler<IRequestHandler<TRequest, TResponse>>(serviceFactory).Handle((TRequest) request, cancellationToken);
 
-            return serviceFactory
-                .GetInstances<IPipelineBehavior<TRequest, TResponse>>()
+            IEnumerable<IPipelineBehavior<TRequest, TResponse>> pipelineBehaviors;
+
+            try
+            {
+                var instance = (IBehaviorOrder) serviceFactory(typeof(IBehaviorOrder));
+                pipelineBehaviors = instance.GetPipelineBehaviors<TRequest, TResponse>(serviceFactory);
+            }
+            catch (Exception) // when an IBehaviour instance can't be found in container
+            {
+                pipelineBehaviors = (IEnumerable<IPipelineBehavior<TRequest, TResponse>>) serviceFactory(typeof(IEnumerable<IPipelineBehavior<TRequest, TResponse>>));
+            }
+
+            return pipelineBehaviors
                 .Reverse()
-                .OrderBy(i => i.GetType()
-                                  .GetCustomAttributes(typeof(PipelinePriorityAttribute), true)
-                                  .Cast<PipelinePriorityAttribute>()
-                                  .FirstOrDefault()?.Priority ?? PipelinePriorityOrder.Normal)
                 .Aggregate((RequestHandlerDelegate<TResponse>) Handler, (next, pipeline) => () => pipeline.Handle((TRequest) request, cancellationToken, next))();
         }
     }
